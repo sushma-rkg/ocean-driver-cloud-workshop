@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ocean Diver</title>
+<style>
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #04304f; }
+  canvas { display: block; width: 100%; height: 100%; touch-action: none; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script>
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+let W, H;
+function resize() { W = canvas.width = innerWidth; H = canvas.height = innerHeight; }
+addEventListener('resize', resize);
+resize();
+
+const target = { x: W / 2, y: H / 2 };
+function aim(e) { target.x = e.clientX; target.y = e.clientY; }
+addEventListener('pointermove', aim);
+addEventListener('pointerdown', aim);
+
+const diver = { x: W / 2, y: H / 2, facing: 1, t: 0 };
+const bubbles = [];
+
+function spawnBubble() {
+  bubbles.push({
+    x: diver.x + diver.facing * 28 + (Math.random() - 0.5) * 8,
+    y: diver.y - 14,
+    r: 2 + Math.random() * 5,
+    speed: 0.6 + Math.random() * 1.2,
+    phase: Math.random() * 6.28,
+  });
+}
+
+function drawDiver() {
+  const kick = Math.sin(diver.t * 0.3) * 6;
+  ctx.save();
+  ctx.translate(diver.x, diver.y);
+  ctx.scale(diver.facing, 1);
+  // flippers
+  ctx.fillStyle = '#f5a623';
+  ctx.beginPath(); ctx.ellipse(-34, 6 + kick, 12, 5, 0.3, 0, 6.28); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(-34, 14 - kick, 12, 5, -0.3, 0, 6.28); ctx.fill();
+  // air tank
+  ctx.fillStyle = '#9aa7b0';
+  ctx.beginPath(); ctx.roundRect(-18, -20, 28, 12, 6); ctx.fill();
+  // body
+  ctx.fillStyle = '#263238';
+  ctx.beginPath(); ctx.ellipse(-4, 4, 26, 12, 0, 0, 6.28); ctx.fill();
+  // arm
+  ctx.strokeStyle = '#263238'; ctx.lineWidth = 6; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(10, 4); ctx.lineTo(24, 10 + kick * 0.3); ctx.stroke();
+  // head + mask
+  ctx.fillStyle = '#ffcc99';
+  ctx.beginPath(); ctx.arc(26, -2, 11, 0, 6.28); ctx.fill();
+  ctx.fillStyle = '#b3e5fc'; ctx.strokeStyle = '#263238'; ctx.lineWidth = 2.5;
+  ctx.beginPath(); ctx.roundRect(26, -9, 12, 10, 4); ctx.fill(); ctx.stroke();
+  ctx.restore();
+}
+
+let frame = 0;
+function tick() {
+  frame++;
+  // swim toward the pointer, easing as he arrives
+  const dx = target.x - diver.x, dy = target.y - diver.y;
+  diver.x += dx * 0.03;
+  diver.y += dy * 0.03;
+  if (Math.abs(dx) > 8) diver.facing = dx > 0 ? 1 : -1;
+  diver.t += 1 + Math.hypot(dx, dy) * 0.02;
+
+  if (frame % 8 === 0) spawnBubble();
+  for (let i = bubbles.length - 1; i >= 0; i--) {
+    const b = bubbles[i];
+    b.y -= b.speed;
+    b.x += Math.sin(b.y * 0.04 + b.phase) * 0.5;
+    if (b.y < -10) bubbles.splice(i, 1);
+  }
+
+  // water
+  const g = ctx.createLinearGradient(0, 0, 0, H);
+  g.addColorStop(0, '#4fc3f7'); g.addColorStop(1, '#04304f');
+  ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+  // sand
+  ctx.fillStyle = '#e8d28a';
+  ctx.beginPath(); ctx.moveTo(0, H);
+  for (let x = 0; x <= W; x += 20) ctx.lineTo(x, H - 30 + Math.sin(x * 0.02) * 8);
+  ctx.lineTo(W, H); ctx.fill();
+
+  // bubbles
+  ctx.lineWidth = 1.5;
+  for (const b of bubbles) {
+    ctx.fillStyle = 'rgba(255,255,255,0.25)';
+    ctx.strokeStyle = 'rgba(255,255,255,0.8)';
+    ctx.beginPath(); ctx.arc(b.x, b.y, b.r, 0, 6.28); ctx.fill(); ctx.stroke();
+  }
+  drawDiver();
+  requestAnimationFrame(tick);
+}
+tick();
+</script>
+</body>
+</html>
